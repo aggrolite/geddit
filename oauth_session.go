@@ -33,12 +33,17 @@ type OAuthSession struct {
 	UserAgent    string
 	ctx          context.Context
 	throttle     *rate.RateLimiter
+	debug        bool
 }
 
 // NewLoginSession creates a new session for those who want to log into a
 // reddit account via OAuth.
-func NewOAuthSession(clientID, clientSecret, useragent, redirectURL string) (*OAuthSession, error) {
-	s := &OAuthSession{}
+func NewOAuthSession(clientID, clientSecret, useragent, redirectURL string, debug bool) (*OAuthSession, error) {
+	s := &OAuthSession{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		debug:        debug,
+	}
 
 	if useragent != "" {
 		s.UserAgent = useragent
@@ -84,9 +89,9 @@ func (o *OAuthSession) LoginAuth(username, password string) error {
 }
 
 // AuthCodeURL creates and returns an auth URL which contains an auth code.
-func (o *OAuthSession) AuthCodeURL(state string, scopes []string) string {
+func (o *OAuthSession) AuthCodeURL(state string, scopes []string, duration string) string {
 	o.OAuthConfig.Scopes = scopes
-	return o.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOnline)
+	return o.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.SetAuthURLParam("duration", duration))
 }
 
 // CodeAuth creates and sets a token using an authentication code returned from AuthCodeURL.
@@ -95,6 +100,7 @@ func (o *OAuthSession) CodeAuth(code string) error {
 	if err != nil {
 		return err
 	}
+	o.TokenExpiry = t.Expiry
 	o.Client = o.OAuthConfig.Client(context.Background(), t)
 	return nil
 }
@@ -157,9 +163,12 @@ func (o *OAuthSession) getBody(link string, d interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	// DEBUG
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("***DEBUG***\nRequest Body: %s\n***DEBUG***\n\n", body)
+
+	// DEBUG
+	if o.debug {
+		fmt.Printf("***DEBUG***\nRequest Body: %s\n***DEBUG***\n\n", body)
+	}
 
 	err = json.Unmarshal(body, d)
 	if err != nil {
@@ -376,9 +385,13 @@ func (o *OAuthSession) postBody(link string, form url.Values, d interface{}) err
 		return err
 	}
 	defer resp.Body.Close()
-	// DEBUG
+
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("***DEBUG***\nRequest Body: %s\n***DEBUG***\n\n", body)
+
+	// DEBUG
+	if o.debug {
+		fmt.Printf("***DEBUG***\nRequest Body: %s\n***DEBUG***\n\n", body)
+	}
 
 	// The caller may want JSON decoded, or this could just be an update/delete request.
 	if d != nil {
@@ -502,15 +515,15 @@ func (o *OAuthSession) Vote(v Voter, dir Vote) error {
 func (o OAuthSession) Reply(r Replier, comment string) (*Comment, error) {
 	// Build form for POST request.
 	form := url.Values{
-		"api_type":  {"json"},
-		"thing_id":  {r.replyID()},
-		"text":      {comment},
+		"api_type": {"json"},
+		"thing_id": {r.replyID()},
+		"text":     {comment},
 	}
 
 	type response struct {
 		JSON struct {
 			Errors [][]string
-			Data struct {
+			Data   struct {
 				Things []struct {
 					Data map[string]interface{}
 				}
