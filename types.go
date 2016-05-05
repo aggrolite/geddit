@@ -88,3 +88,30 @@ type Deleter interface {
 type Replier interface {
 	replyID() string
 }
+
+// OAuth constants
+
+const (
+	OAuthScope_Identity        string = "identity"
+	OAuthScope_Edit            string = "edit"
+	OAuthScope_Flair           string = "flair"
+	OAuthScope_History         string = "history"
+	OAuthScope_Modconfig       string = "modconfig"
+	OAuthScope_Modflair        string = "modflair"
+	OAuthScope_Modlog          string = "modlog"
+	OAuthScope_Modposts        string = "modposts"
+	OAuthScope_Modwiki         string = "modwiki"
+	OAuthScope_Mysubreddits    string = "mysubreddits"
+	OAuthScope_Privatemessages string = "privatemessages"
+	OAuthScope_Read            string = "read"
+	OAuthScope_Report          string = "report"
+	OAuthScope_Save            string = "save"
+	OAuthScope_Submit          string = "submit"
+	OAuthScope_Subscribe       string = "subscribe"
+	OAuthScope_Vote            string = "vote"
+	OAuthScope_Wikiedit        string = "wikiedit"
+	OAuthScope_Wikiread        string = "wikiread"
+
+	OAuthDuration_Temporary string = "temporary"
+	OAuthDuration_Permanent string = "permanent"
+)
